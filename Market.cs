@@ -55,13 +55,7 @@ namespace Melancholy
 
             marketObj = new Classes.Market
             {
-                code = 200,
-                message = "OK",
-                data = new Classes.MarketData
-                {
-                    playerId = "xxx",
-                    inventory = inventory
-                }
+                inventoryItems = inventory
             };
         }
 

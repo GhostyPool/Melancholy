@@ -87,15 +87,7 @@
 
         public class Market
         {
-            public int code { get; set; }
-            public string message { get; set; } = string.Empty;
-            public MarketData data { get; set; } = new();
-        }
-
-        public class MarketData
-        {
-            public string playerId { get; set; } = string.Empty;
-            public List<InventoryItem> inventory { get; set; } = [];
+            public List<InventoryItem> inventoryItems { get; set; } = [];
         }
 
         public class InventoryItem
