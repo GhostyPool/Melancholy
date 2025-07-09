@@ -17,8 +17,8 @@ namespace Melancholy
 
         public static void Header()
         {
-            CenterText("\"Two facts: boys make better girls and furries are superior to all\" - Essence");
-            CenterText("MarketUpdater developed by Essence_BHVR (discord: bhvr)");
+            CenterText("\"Two facts: boys make better girls and ur mom is fat\" - Essence & Ossie");
+            CenterText("MarketUpdater developed by Essence_BHVR & Ossie (discord: bhvr/ossie)");
             Console.WriteLine(Environment.NewLine);
         }
 

@@ -1,5 +1,7 @@
-﻿using CUE4Parse.Encryption.Aes;
+﻿using CUE4Parse.Compression;
+using CUE4Parse.Encryption.Aes;
 using CUE4Parse.FileProvider;
+using CUE4Parse.GameTypes.DBD.Encryption.Aes;
 using CUE4Parse.MappingsProvider;
 using CUE4Parse.UE4.Objects.Core.Misc;
 using CUE4Parse.UE4.Versions;
@@ -17,11 +19,42 @@ namespace Melancholy
 
         public static void Initialize()
         {
-            Provider = new DefaultFileProvider(Extras.Settings.PakPath, SearchOption.AllDirectories, true, new VersionContainer(EGame.GAME_DeadbyDaylight));
+            OodleHelper.DownloadOodleDll(OodleHelper.OODLE_DLL_NAME);
+            if (!File.Exists(OodleHelper.OODLE_DLL_NAME))
+            {
+                Console.WriteLine($"Oodle DLL not found. Please ensure it is present in the working directory.");
+                return;
+            }
+
+            OodleHelper.Initialize(OodleHelper.OODLE_DLL_NAME);
+
+            var versionContainer = new VersionContainer(EGame.GAME_DeadByDaylight);
+            Provider = new DefaultFileProvider(
+                new DirectoryInfo(Extras.Settings.PakPath),
+                SearchOption.AllDirectories,
+                versionContainer,
+                StringComparer.OrdinalIgnoreCase
+            );
+
+            Provider.CustomEncryption = DBDAes.DbDDecrypt;
+
             Provider.Initialize();
-            Provider.SubmitKey(new FGuid(), new FAesKey(Extras.Settings.AesKey));
-            Provider.LoadLocalization();
+
             Provider.MappingsContainer = new FileUsmapTypeMappingsProvider(Extras.Settings.MappingsPath);
+
+            var aesKey = new FAesKey(Extras.Settings.AesKey);
+            var zeroGuid = new FGuid(0);
+
+            Provider.SubmitKey(zeroGuid, aesKey);
+
+            Provider.PostMount();
+
+            var aesMax = Provider.RequiredKeys.Count + Provider.Keys.Count;
+            var archiveMax = Provider.UnloadedVfs.Count + Provider.MountedVfs.Count;
+
+            Provider.LoadVirtualPaths(new FPackageFileVersion(522, 1009));
+
+            Provider.TryChangeCulture(Provider.GetLanguageCode(ELanguage.English));
         }
 
         public static string GetAccessKey()
@@ -33,8 +66,10 @@ namespace Melancholy
             using (var reader = new StreamReader(stream))
             {
                 while (reader.ReadLine() is { } line)
+                {
                     if (line.Contains("_live"))
                         lastLine = line;
+                }
             }
 
             var match = MyRegex().Match(lastLine);
@@ -122,7 +157,7 @@ namespace Melancholy
             {
                 var export =
                     JsonConvert.DeserializeObject<dynamic>(
-                        JsonConvert.SerializeObject(Provider.LoadAllObjects(item))) ?? new ExpandoObject();
+                        JsonConvert.SerializeObject(Provider.LoadPackageObjects(item))) ?? new ExpandoObject();
 
                 foreach (JProperty p in export[0]?.Rows ?? Enumerable.Empty<JProperty>())
                 {

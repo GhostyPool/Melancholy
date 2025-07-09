@@ -33,11 +33,11 @@ PopulateSettings:
     Extras.Settings.PakPath = Extras.PromptInput("Provide path to your paks folder: ");
     Extras.Settings.AesKey = Extras.PromptInput("Provide AES key: ");
 
-    string directoryPath = AppDomain.CurrentDomain.BaseDirectory;
+    string directoryPath = Environment.CurrentDirectory;
     var usmapFiles = Directory.GetFiles(directoryPath, "*.usmap");
 
     if (usmapFiles.Length == 0)
-        throw new Exception($"No .usmap files found, contact @bhvr for the latest file or place your own in {directoryPath}");
+        throw new Exception($"No mappings files found");
 
     Console.WriteLine("Select a mappings file by entering its number:");
     for (int i = 0; i < usmapFiles.Length; i++)
@@ -65,11 +65,13 @@ SkipSettings:
     Console.WriteLine("Doing CUE4Parse stuffs...");
 
     Cue4Parse.Initialize();
+
     Cue4Parse.CdnAccessKey = Cue4Parse.GetAccessKey();
+
     Cue4Parse.Get_Files();
 
     if (Cue4Parse.IsListEmpty())
-        throw new Exception("Mappings file outdated, contact @bhvr on Discord for the new mappings file.");
+        throw new Exception("Mappings file outdated");
 
     Market.ItemAmount = Extras.PromptIntInput("Enter desired item amount (0 for random): ");
     
@@ -135,6 +137,8 @@ SkipSettings:
     await Player.Generate_PlayerLevel();
 
     AllItemsMaker.GenerateAllItems();
+
+    Console.WriteLine("CDN Key: " + Cue4Parse.CdnAccessKey);
 
     Console.WriteLine("\nPress any key to close...");
     Console.ReadKey();
