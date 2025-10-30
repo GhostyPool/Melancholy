@@ -73,7 +73,8 @@ namespace Melancholy
             }
 
             var match = MyRegex().Match(lastLine);
-            return match.Groups[1].Value;
+            string replaced = match.Groups[1].Value.Replace("_", "/").Replace("-", "+");
+            return replaced;
         }
 
         public static void Get_Files()
