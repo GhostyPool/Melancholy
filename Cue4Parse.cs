@@ -176,6 +176,14 @@ namespace Melancholy
             "DF_Torso03_01",
             "Wraith_Body_Ohmwrecker"
         };
+        private static JToken? GetValueIgnoreCase(this JToken? token, string key)
+        {
+            if (token is not JObject obj) return null;
+
+            obj.TryGetValue(key, StringComparison.OrdinalIgnoreCase, out JToken? value);
+
+            return value;
+        }
 
         private static void Add_Values(List<string> list, string type)
         {
@@ -183,7 +191,7 @@ namespace Melancholy
             {
                 var export =
                     JsonConvert.DeserializeObject<dynamic>(
-                        JsonConvert.SerializeObject(Provider.LoadPackageObjects(item))) ?? new ExpandoObject();
+                        JsonConvert.SerializeObject(Provider?.LoadPackage(item).GetExports())) ?? new ExpandoObject();
 
                 foreach (JProperty p in export[0]?.Rows ?? Enumerable.Empty<JProperty>())
                 {
@@ -193,33 +201,33 @@ namespace Melancholy
                         switch (type)
                         {
                             case "CustomizationItemDB":
-                                string customizationId = property?["customizationId"]?.ToString();
-                                string localizedString =
-                                    property?["UIData"]?["DisplayName"]?["LocalizedString"]?.ToString();
-                                
+                                string? customizationId = property?.GetValueIgnoreCase("customizationId")?.ToString();
+                                string? localizedString =
+                                    property?.GetValueIgnoreCase("UIData")?.GetValueIgnoreCase("DisplayName")?.GetValueIgnoreCase("LocalizedString")?.ToString();
+
                                 Classes.Customization customization = new()
                                 {
-                                    CosmeticId = property?["customizationId"]?.ToString() ?? string.Empty,
+                                    CosmeticId = customizationId ?? string.Empty,
                                     CosmeticName =
-                                        property?["UIData"]?["DisplayName"]?["LocalizedString"]?.ToString() ??
+                                        localizedString ??
                                         string.Empty,
                                     CosmeticDescription =
-                                        property?["UIData"]?["Description"]?["LocalizedString"]?.ToString() ??
+                                        property?.GetValueIgnoreCase("UIData")?.GetValueIgnoreCase("Description")?.GetValueIgnoreCase("LocalizedString")?.ToString() ??
                                         string.Empty,
-                                    Category = property?["category"]?.ToString() ?? string.Empty,
+                                    Category = property?.GetValueIgnoreCase("category")?.ToString() ?? string.Empty,
                                     AssociatedCharacterIndex =
-                                        property?["AssociatedCharacter"]?.ToString() ?? string.Empty,
-                                    Rarity = property?["Rarity"]?.ToString() ?? string.Empty,
-                                    IsInStore = property?["IsInStore"]?.ToString() ?? string.Empty,
-                                    EventId = property?["eventID"]?.ToString() ?? string.Empty,
-                                    Availability = property?["Availability"]?["ItemAvailability"]?.ToString() ??
+                                        property?.GetValueIgnoreCase("AssociatedCharacter")?.ToString() ?? string.Empty,
+                                    Rarity = property?.GetValueIgnoreCase("Rarity")?.ToString() ?? string.Empty,
+                                    IsInStore = property?.GetValueIgnoreCase("IsInStore")?.ToString() ?? string.Empty,
+                                    EventId = property?.GetValueIgnoreCase("eventID")?.ToString() ?? string.Empty,
+                                    Availability = property?.GetValueIgnoreCase("Availability")?.GetValueIgnoreCase("ItemAvailability")?.ToString() ??
                                                    string.Empty,
                                     FilePath = item ?? string.Empty,
-                                    IsLegacy = (property?["InclusionVersion"]?.ToString() == "Legacy"
-                                                && Regex.IsMatch(property?["UIData"]?["DisplayName"]?["LocalizedString"]?.ToString(), @"Legacy.*\b(I|II|III)\b", RegexOptions.IgnoreCase)),
-                                    IsExclusive = (exclusiveStrings.Any(s => customizationId.Contains(s)
-                                                                             && !customizationId.Contains("Charity")))
-                                                  || (localizedString.Contains("Twitchy")
+                                    IsLegacy = (string.Equals(property?.GetValueIgnoreCase("InclusionVersion")?.ToString(), "Legacy", StringComparison.OrdinalIgnoreCase)
+                                                && localizedString != null
+                                                && Regex.IsMatch(localizedString, @"Legacy.*\b(I|II|III)\b", RegexOptions.IgnoreCase)),
+                                    IsExclusive = (exclusiveStrings.Any(s => customizationId != null && customizationId.Contains(s) && !customizationId.Contains("Charity")))
+                                                  || (localizedString != null && localizedString.Contains("Twitchy")
                                                       && !(localizedString.Contains("Flame") || localizedString.Contains("Medkit")))
                                 };
                                 if (!IsInBlacklist(customization.CosmeticId)) Classes.Ids.CosmeticIds.Add(customization);
@@ -227,46 +235,46 @@ namespace Melancholy
                             case "OutfitDB":
                                 Classes.Outfit outfit = new()
                                 {
-                                    OutfitId = property?["ID"]?.ToString() ?? string.Empty,
-                                    OutfitName = property?["UIData"]?["DisplayName"]?["LocalizedString"]?.ToString() ??
+                                    OutfitId = property?.GetValueIgnoreCase("ID")?.ToString() ?? string.Empty,
+                                    OutfitName = property?.GetValueIgnoreCase("UIData")?.GetValueIgnoreCase("DisplayName")?.GetValueIgnoreCase("LocalizedString")?.ToString() ??
                                                  string.Empty,
                                     OutfitDescription =
-                                        property?["UIData"]?["Description"]?["LocalizedString"]?.ToString() ??
+                                        property?.GetValueIgnoreCase("UIData")?.GetValueIgnoreCase("Description")?.GetValueIgnoreCase("LocalizedString")?.ToString() ??
                                         string.Empty,
-                                    CollectionName = property?["CollectionName"]?["LocalizedString"]?.ToString() ??
+                                    CollectionName = property?.GetValueIgnoreCase("CollectionName")?.GetValueIgnoreCase("LocalizedString")?.ToString() ??
                                                      string.Empty,
-                                    Availability = property?["Availability"]?["ItemAvailability"]?.ToString() ??
+                                    Availability = property?.GetValueIgnoreCase("Availability")?.GetValueIgnoreCase("ItemAvailability")?.ToString() ??
                                                    string.Empty,
                                     FilePath = item ?? string.Empty
                                 };
                                 if (!IsInBlacklist(outfit.OutfitId)) Classes.Ids.OutfitIds.Add(outfit);
                                 break;
                             case "CharacterDescriptionDB":
-                                if (property?["CharacterId"]?.ToString() == "None") continue;
+                                if (string.Equals(property?.GetValueIgnoreCase("CharacterId")?.ToString(), "None", StringComparison.OrdinalIgnoreCase)) continue;
                                 Classes.Character character = new()
                                 {
-                                    CharacterName = property?["CharacterId"]?.ToString() ?? string.Empty,
-                                    CharacterIndex = property?["characterIndex"]?.ToString() ?? string.Empty,
-                                    CharacterType = property?["Role"]?.ToString() ?? string.Empty,
-                                    CharacterDefaultItem = property?["DefaultItem"]?.ToString() ?? string.Empty,
-                                    Name = property?["DisplayName"]?["LocalizedString"]?.ToString() ?? string.Empty,
+                                    CharacterName = property?.GetValueIgnoreCase("CharacterId")?.ToString() ?? string.Empty,
+                                    CharacterIndex = property?.GetValueIgnoreCase("characterIndex")?.ToString() ?? string.Empty,
+                                    CharacterType = property?.GetValueIgnoreCase("Role")?.ToString() ?? string.Empty,
+                                    CharacterDefaultItem = property?.GetValueIgnoreCase("DefaultItem")?.ToString() ?? string.Empty,
+                                    Name = property?.GetValueIgnoreCase("DisplayName")?.GetValueIgnoreCase("LocalizedString")?.ToString() ?? string.Empty,
                                     FilePath = item ?? string.Empty
                                 };
                                 Classes.Ids.DlcIds.Add(character);
                                 break;
                             case "ItemDB":
-                                if (property?["Type"]?.ToString() != "EInventoryItemType::Power")
+                                if (!string.Equals(property?.GetValueIgnoreCase("Type")?.ToString(), "EInventoryItemType::Power", StringComparison.OrdinalIgnoreCase))
                                 {
                                     Classes.ItemOfferingPerk itemData = new()
                                     {
-                                        ItemId = property?["ItemId"]?.ToString() ?? string.Empty,
-                                        CharacterType = property?["Role"]?.ToString() ?? string.Empty,
-                                        Rarity = property?["Rarity"]?.ToString() ?? string.Empty,
-                                        Availability = property?["Availability"]?["ItemAvailability"]?.ToString() ?? string.Empty,
-                                        Name = property?["UIData"]?["DisplayName"]?["LocalizedString"]?.ToString() ?? string.Empty,
+                                        ItemId = property?.GetValueIgnoreCase("ItemId")?.ToString() ?? string.Empty,
+                                        CharacterType = property?.GetValueIgnoreCase("Role")?.ToString() ?? string.Empty,
+                                        Rarity = property?.GetValueIgnoreCase("Rarity")?.ToString() ?? string.Empty,
+                                        Availability = property?.GetValueIgnoreCase("Availability")?.GetValueIgnoreCase("ItemAvailability")?.ToString() ?? string.Empty,
+                                        Name = property?.GetValueIgnoreCase("UIData")?.GetValueIgnoreCase("DisplayName")?.GetValueIgnoreCase("LocalizedString")?.ToString() ?? string.Empty,
                                         FilePath = item ?? string.Empty,
-                                        ShouldBeInInventory = property?["Inventory"]?.Value<bool>() ?? true,
-                                        EventId = property?["eventID"]?.ToString() ?? string.Empty
+                                        ShouldBeInInventory = property?.GetValueIgnoreCase("Inventory")?.Value<bool>() ?? true,
+                                        EventId = property?.GetValueIgnoreCase("eventID")?.ToString() ?? string.Empty
                                     };
                                     if (!IsInBlacklist(itemData.ItemId)) Classes.Ids.ItemIds.Add(itemData);
                                 }
@@ -274,43 +282,43 @@ namespace Melancholy
                             case "ItemAddonDB":
                                 Classes.ItemAddon itemAddon = new()
                                 {
-                                    ItemId = property?["ItemId"]?.ToString() ?? string.Empty,
-                                    CharacterType = property?["Role"]?.ToString() ?? string.Empty,
-                                    CharacterDefaultItem = property?["ParentItem"]?["itemIds"]?.Count() > 0 ? (property?["ParentItem"]?["itemIds"]?[0]?.ToString() ?? string.Empty) : string.Empty,
-                                    Rarity = property?["Rarity"]?.ToString() ?? string.Empty,
-                                    Availability = property?["Availability"]?["ItemAvailability"]?.ToString() ?? string.Empty,
-                                    Name = property?["UIData"]?["DisplayName"]?["LocalizedString"]?.ToString() ?? string.Empty,
+                                    ItemId = property?.GetValueIgnoreCase("ItemId")?.ToString() ?? string.Empty,
+                                    CharacterType = property?.GetValueIgnoreCase("Role")?.ToString() ?? string.Empty,
+                                    CharacterDefaultItem = property?.GetValueIgnoreCase("ParentItem")?.GetValueIgnoreCase("itemIds")?.Count() > 0 ? (property?.GetValueIgnoreCase("ParentItem")?.GetValueIgnoreCase("itemIds")?[0]?.ToString() ?? string.Empty) : string.Empty,
+                                    Rarity = property?.GetValueIgnoreCase("Rarity")?.ToString() ?? string.Empty,
+                                    Availability = property?.GetValueIgnoreCase("Availability")?.GetValueIgnoreCase("ItemAvailability")?.ToString() ?? string.Empty,
+                                    Name = property?.GetValueIgnoreCase("UIData")?.GetValueIgnoreCase("DisplayName")?.GetValueIgnoreCase("LocalizedString")?.ToString() ?? string.Empty,
                                     FilePath = item ?? string.Empty,
-                                    ShouldBeInInventory = property?["Inventory"]?.Value<bool>() ?? true,
-                                    EventId = property?["eventID"]?.ToString() ?? string.Empty
+                                    ShouldBeInInventory = property?.GetValueIgnoreCase("Inventory")?.Value<bool>() ?? true,
+                                    EventId = property?.GetValueIgnoreCase("eventID")?.ToString() ?? string.Empty
                                 };
                                 if (!IsInBlacklist(itemAddon.ItemId)) Classes.Ids.AddonIds.Add(itemAddon);
                                 break;
                             case "OfferingDB":
                                 Classes.ItemOfferingPerk offering = new()
                                 {
-                                    ItemId = property?["ItemId"]?.ToString() ?? string.Empty,
-                                    CharacterType = property?["Role"]?.ToString() ?? string.Empty,
-                                    Rarity = property?["Rarity"]?.ToString() ?? string.Empty,
-                                    Availability = property?["Availability"]?["ItemAvailability"]?.ToString() ?? string.Empty,
-                                    Name = property?["UIData"]?["DisplayName"]?["LocalizedString"]?.ToString() ?? string.Empty,
+                                    ItemId = property?.GetValueIgnoreCase("ItemId")?.ToString() ?? string.Empty,
+                                    CharacterType = property?.GetValueIgnoreCase("Role")?.ToString() ?? string.Empty,
+                                    Rarity = property?.GetValueIgnoreCase("Rarity")?.ToString() ?? string.Empty,
+                                    Availability = property?.GetValueIgnoreCase("Availability")?.GetValueIgnoreCase("ItemAvailability")?.ToString() ?? string.Empty,
+                                    Name = property?.GetValueIgnoreCase("UIData")?.GetValueIgnoreCase("DisplayName")?.GetValueIgnoreCase("LocalizedString")?.ToString() ?? string.Empty,
                                     FilePath = item ?? string.Empty,
-                                    ShouldBeInInventory = property?["Inventory"]?.Value<bool>() ?? true,
-                                    EventId = property?["eventID"]?.ToString() ?? string.Empty
+                                    ShouldBeInInventory = property?.GetValueIgnoreCase("Inventory")?.Value<bool>() ?? true,
+                                    EventId = property?.GetValueIgnoreCase("eventID")?.ToString() ?? string.Empty
                                 };
                                 if (!IsInBlacklist(offering.ItemId)) Classes.Ids.OfferingIds.Add(offering);
                                 break;
                             case "PerkDB":
                                 Classes.ItemOfferingPerk perk = new()
                                 {
-                                    ItemId = property?["ItemId"]?.ToString() ?? string.Empty,
-                                    CharacterType = property?["Role"]?.ToString() ?? string.Empty,
-                                    Rarity = property?["Rarity"]?.ToString() ?? string.Empty,
-                                    Availability = property?["Availability"]?["ItemAvailability"]?.ToString() ?? string.Empty,
-                                    Name = property?["UIData"]?["DisplayName"]?["LocalizedString"]?.ToString() ?? string.Empty,
+                                    ItemId = property?.GetValueIgnoreCase("ItemId")?.ToString() ?? string.Empty,
+                                    CharacterType = property?.GetValueIgnoreCase("Role")?.ToString() ?? string.Empty,
+                                    Rarity = property?.GetValueIgnoreCase("Rarity")?.ToString() ?? string.Empty,
+                                    Availability = property?.GetValueIgnoreCase("Availability")?.GetValueIgnoreCase("ItemAvailability")?.ToString() ?? string.Empty,
+                                    Name = property?.GetValueIgnoreCase("UIData")?.GetValueIgnoreCase("DisplayName")?.GetValueIgnoreCase("LocalizedString")?.ToString() ?? string.Empty,
                                     FilePath = item ?? string.Empty,
-                                    ShouldBeInInventory = property?["Inventory"]?.Value<bool>() ?? true,
-                                    EventId = property?["eventID"]?.ToString() ?? string.Empty
+                                    ShouldBeInInventory = property?.GetValueIgnoreCase("Inventory")?.Value<bool>() ?? true,
+                                    EventId = property?.GetValueIgnoreCase("eventID")?.ToString() ?? string.Empty
                                 };
                                 if (!IsInBlacklist(perk.ItemId)) Classes.Ids.PerkIds.Add(perk);
                                 break;
