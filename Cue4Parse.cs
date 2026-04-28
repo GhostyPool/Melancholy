@@ -19,14 +19,17 @@ namespace Melancholy
 
         public static void Initialize()
         {
-            OodleHelper.DownloadOodleDll(OodleHelper.OODLE_DLL_NAME);
-            if (!File.Exists(OodleHelper.OODLE_DLL_NAME))
+            string? oodlePath = OodleHelper.OodleFileName;
+
+            OodleHelper.DownloadOodleDll(ref oodlePath);
+            if (!File.Exists(oodlePath))
             {
                 Console.WriteLine($"Oodle DLL not found. Please ensure it is present in the working directory.");
                 return;
             }
 
-            OodleHelper.Initialize(OodleHelper.OODLE_DLL_NAME);
+            OodleHelper.Initialize(oodlePath);
+            ZlibHelper.Initialize();
 
             var versionContainer = new VersionContainer(EGame.GAME_DeadByDaylight);
             Provider = new DefaultFileProvider(
@@ -43,9 +46,12 @@ namespace Melancholy
             Provider.MappingsContainer = new FileUsmapTypeMappingsProvider(Extras.Settings.MappingsPath);
 
             var aesKey = new FAesKey(Extras.Settings.AesKey);
-            var zeroGuid = new FGuid(0);
 
-            Provider.SubmitKey(zeroGuid, aesKey);
+            var requiredGuids = Provider.RequiredKeys.ToList();
+            foreach (var guid in requiredGuids)
+            {
+                Provider.SubmitKey(guid, aesKey);
+            }
 
             Provider.PostMount();
 
@@ -59,7 +65,21 @@ namespace Melancholy
 
         public static string GetAccessKey()
         {
-            Provider.TrySaveAsset("/Game/Config/DefaultGame.ini", out var data);
+            if (!Provider.TrySaveAsset("/Game/Config/DefaultGame.ini", out var data) || data is null)
+            {
+                var candidate = Provider.Files.Values.FirstOrDefault(f => string.Equals(f.Name, "DefaultGame.ini", StringComparison.OrdinalIgnoreCase));
+
+                if (candidate is null)
+                {
+                    return string.Empty;
+                }
+
+                if (!Provider.TrySaveAsset(candidate.Path, out data) || data is null)
+                {
+                    return string.Empty;
+                }
+            }
+
             var lastLine = "";
 
             using (var stream = new MemoryStream(data))
@@ -73,6 +93,11 @@ namespace Melancholy
             }
 
             var match = MyRegex().Match(lastLine);
+            if (!match.Success)
+            {
+                return string.Empty;
+            }
+
             string replaced = match.Groups[1].Value.Replace("_", "/").Replace("-", "+");
             return replaced;
         }

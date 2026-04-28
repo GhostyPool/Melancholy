@@ -1,10 +1,20 @@
 ﻿using Melancholy;
 using Newtonsoft.Json;
+#if DEBUG
+using Serilog;
+#endif
 
 const string SettingsFile = "settings.json";
 
 try
 {
+#if DEBUG
+    Serilog.Log.Logger = new Serilog.LoggerConfiguration()
+        .MinimumLevel.Verbose()
+        .WriteTo.Console(restrictedToMinimumLevel: Serilog.Events.LogEventLevel.Information)
+        .CreateLogger();
+#endif
+
     Console.Title = "DBD OwO";
     Extras.Header();
 
@@ -145,6 +155,6 @@ SkipSettings:
 }
 catch (Exception ex)
 {
-    Console.WriteLine(ex.Message);
+    Console.WriteLine(ex);
     Console.ReadLine();
 }
